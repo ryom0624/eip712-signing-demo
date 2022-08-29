@@ -4,14 +4,13 @@ function parseSignature(signature) {
   var v = signature.substring(128, 130);
 
   return {
-      r: "0x" + r,
-      s: "0x" + s,
-      v: parseInt(v, 16)
-  }
+    r: "0x" + r,
+    s: "0x" + s,
+    v: parseInt(v, 16),
+  };
 }
 
 function genSolidityVerifier(signature, signer, chainId) {
-	  
   return solidityCode
     .replace("<CHAINID>", chainId)
     .replace("<SIGR>", signature.r)
@@ -20,22 +19,57 @@ function genSolidityVerifier(signature, signer, chainId) {
     .replace("<SIGNER>", signer);
 }
 
-window.onload = function (e) {
-  var res = document.getElementById("response");
-  res.style.display = "none";
+window.onload = async function (e) {
+  const ethereum = window.ethereum;
+  const chainId = 1;
+
+  var response = document.getElementById("response");
+  response.style.display = "none";
+
+  if (ethereum && ethereum.isMetaMask) {
+    console.log("Ethereum successfully detected!");
+    // Access the decentralized web!
+  } else {
+    console.log("Please install MetaMask!");
+  }
+
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  let account;
+  console.log(accounts);
 
   // force the user to unlock their MetaMask
-  if (web3.eth.accounts[0] == null) {
+  if (accounts == null) {
     alert("Please unlock MetaMask first");
     // Trigger login request with MetaMask
-    web3.currentProvider.enable().catch(alert)
+    web3.currentProvider.enable().catch(alert);
+  } else {
+    account = accounts[0];
   }
 
   var signBtn = document.getElementById("signBtn");
-  signBtn.onclick = function(e) {
-    if (web3.eth.accounts[0] == null) {
-      return;
-    }
+
+  signBtn.onclick = async function (e) {
+    if (!ethereum && account == null) return;
+
+    const messagebody = JSON.stringify({
+      domain: {
+        chainId: chainId,
+        name: "EIP712-demo",
+        version: "1",
+      },
+      message: {
+        text: "Hello World",
+      },
+      primaryType: "Message",
+      types: {
+        EIP712Domain: [
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+        ],
+        Message: [{ name: "text", type: "string" }],
+      },
+    });
 
     const domain = [
       { name: "name", type: "string" },
@@ -55,24 +89,22 @@ window.onload = function (e) {
       { name: "wallet", type: "address" },
     ];
 
-    const chainId = parseInt(web3.version.network, 10);
-  
     const domainData = {
       name: "My amazing dApp",
       version: "2",
       chainId: chainId,
       verifyingContract: "0x1C56346CD2A2Bf3202F771f50d3D14a367B48070",
-      salt: "0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a558"
+      salt: "0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a558",
     };
 
     var message = {
       amount: 100,
       bidder: {
         userId: 323,
-        wallet: "0x3333333333333333333333333333333333333333"
-      }
+        wallet: "0x3333333333333333333333333333333333333333",
+      },
     };
-    
+
     const data = JSON.stringify({
       types: {
         EIP712Domain: domain,
@@ -81,27 +113,24 @@ window.onload = function (e) {
       },
       domain: domainData,
       primaryType: "Bid",
-      message: message
+      message: message,
     });
 
-    const signer = web3.toChecksumAddress(web3.eth.accounts[0]);
+    const res = await window.ethereum
+      .request({
+        method: "eth_signTypedData_v4",
+        // params: [account, messagebody],
+        params: [account, data],
+      })
+      .catch((err) => {
+        console.log(err);
+      });
 
-    web3.currentProvider.sendAsync(
-      {
-        method: "eth_signTypedData_v3",
-        params: [signer, data],
-        from: signer
-      }, 
-      function(err, result) {
-        if (err || result.error) {
-          return console.error(result);
-        }
+    console.log(res);
 
-        const signature = parseSignature(result.result.substring(2));
+    const signature = parseSignature(res);
 
-        res.style.display = "block";
-        res.value = genSolidityVerifier(signature, signer, chainId);
-      }
-    );
+    response.style.display = "block";
+    response.value = genSolidityVerifier(signature, account, chainId);
   };
-}
+};

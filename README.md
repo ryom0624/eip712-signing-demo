@@ -1,10 +1,14 @@
 # EIP712 Signing Demo
 
-This is a demonstration of EIP712 signing support via MetaMask's
-`eth_signTypedData_v3` API call. It includes copy-and-paste
-Solidity code that performs EIP712 hashing and `ecrecover`y on-chain.
+using MetaMask
 
-[Try it here](https://weijiekoh.github.io/eip712-signing-demo/index.html).
+```sh
+python -m http.server 8000
+```
 
-Please use MetaMask [version 4.14.0](https://github.com/MetaMask/metamask-extension/releases/)
-and above as earlier versions do not necessarily support `eth_signTypedData_v3`.
+References:
+
+https://github.com/weijiekoh/eip712-signing-demo
+https://medium.com/metamask/eip712-is-coming-what-to-expect-and-how-to-use-it-bb92fd1a7a26
+
+https://gitlab.com/tomari/EIP712BrowserExample
